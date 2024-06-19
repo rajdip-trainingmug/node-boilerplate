@@ -1,0 +1,67 @@
+on: workflow_dispatch
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+      - name: node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+          registry-url: https://registry.npmjs.org
+      - name: install pnpm
+        run: npm i -g pnpm
+      - name: install
+        run: pnpm i
+      - name: Download the additional test files
+        env:
+          TEST_FILES: ${{ inputs.testFiles }}
+          TEST_FILES_STORAGE_LOCATION: ${{ inputs.testFilesStorageLocation }}
+        run: |
+          # Split the files by comma
+          file_list=${TEST_FILES//,/ }
+
+          # Download the files
+          for file in $file_list; do
+            fn="${file##*/}"
+            file_name="${fn%\?*}" # Get the file name
+            echo "Downloading $file_name in $TEST_FILES_STORAGE_LOCATION"
+            curl --create-dirs --output-dir $TEST_FILES_STORAGE_LOCATION -o $file_name $file
+          done
+      - name: Run the tests
+        run: pnpm test > test.log 2>&1
+      - name: Parse and send the results to the API
+        env:
+          WEBHOOK_TOKEN: ${{ inputs.webhookToken }}
+          CALLBACK_URL: ${{ inputs.callbackUrl }}
+        run: |
+          summary_line=$(cat test.log | grep -E "^Tests:")
+
+          read -r pos_2 pos_3 pos_4 pos_5 pos_6 <<< `echo $summary_line | awk -F' ' '{print $2, $3, $4, $5, $6}'`
+
+          passed_tests=0
+          failed_tests=0
+          total_tests=0
+
+          if [ "$pos_3" = "failed," ]; then
+              failed_tests=$pos_2
+              passed_tests=$pos_4
+              total_tests=$pos_6
+          else
+              passed_tests=$pos_2
+              total_tests=$pos_4
+          fi
+
+          echo "Passed: $passed_tests"
+          echo "Failed: $failed_tests"
+          echo "Total: $total_tests"
+
+          curl \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: $WEBHOOK_TOKEN" \
+            -d "{\"passedTests\": $passed_tests, \"failedTests\": $failed_tests, \"totalTests\": $total_tests, \"commitSHA\": \"$GITHUB_SHA\"}" \
+            $CALLBACK_URL
