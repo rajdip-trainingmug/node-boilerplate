@@ -1,7 +1,22 @@
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      testFiles:
+        description: 'Comma separated list of test files to download'
+        required: true
+      testFilesStorageLocation:
+        description: 'Location to store the test files'
+        required: true
+      webhookToken:
+        description: 'Token to authenticate the webhook'
+        required: true
+      callbackUrl:
+        description: 'URL to send the results to'
+        required: true
 
 jobs:
   evaluate:
+    name: Evaluate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
