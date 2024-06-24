@@ -48,6 +48,7 @@ jobs:
           done
       - name: Run the tests
         run: pnpm test > test.log 2>&1
+        continue-on-error: true
       - name: Parse and send the results to the API
         env:
           WEBHOOK_TOKEN: ${{ inputs.webhook_token }}
