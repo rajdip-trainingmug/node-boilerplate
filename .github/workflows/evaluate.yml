@@ -1,16 +1,16 @@
 on:
   workflow_dispatch:
     inputs:
-      testFiles:
+      test_files:
         description: 'Comma separated list of test files to download'
         required: true
-      testFilesStorageLocation:
+      test_files_storage_location:
         description: 'Location to store the test files'
         required: true
-      webhookToken:
+      webhook_token:
         description: 'Token to authenticate the webhook'
         required: true
-      callbackUrl:
+      callback_url:
         description: 'URL to send the results to'
         required: true
 
@@ -33,8 +33,8 @@ jobs:
         run: pnpm i
       - name: Download the additional test files
         env:
-          TEST_FILES: ${{ inputs.testFiles }}
-          TEST_FILES_STORAGE_LOCATION: ${{ inputs.testFilesStorageLocation }}
+          TEST_FILES: ${{ inputs.test_files }}
+          TEST_FILES_STORAGE_LOCATION: ${{ inputs.test_files_storage_location }}
         run: |
           # Split the files by comma
           file_list=${TEST_FILES//,/ }
@@ -50,8 +50,8 @@ jobs:
         run: pnpm test > test.log 2>&1
       - name: Parse and send the results to the API
         env:
-          WEBHOOK_TOKEN: ${{ inputs.webhookToken }}
-          CALLBACK_URL: ${{ inputs.callbackUrl }}
+          WEBHOOK_TOKEN: ${{ inputs.webhook_token }}
+          CALLBACK_URL: ${{ inputs.callback_url }}
         run: |
           summary_line=$(cat test.log | grep -E "^Tests:")
 
